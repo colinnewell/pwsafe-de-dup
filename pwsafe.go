@@ -1,5 +1,6 @@
 package pwsafe
 
+// PWSafeV3 Password Safe V3 header
 // min size 232
 // check for PWS3
 // should have EOF block PWS3-EOF

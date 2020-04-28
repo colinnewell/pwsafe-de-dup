@@ -36,6 +36,14 @@ func main() {
 		log.Fatal("Error while opening file", err)
 	}
 
+	info, err := file.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if info.Size() < 232 {
+		log.Fatal("File truncated")
+	}
+
 	defer file.Close()
 	data, err := readNextBytes(file, int(unsafe.Sizeof(s)))
 	if err != nil {
@@ -47,5 +55,9 @@ func main() {
 	if err := binary.Read(buffer, binary.LittleEndian, &s); err != nil {
 		log.Fatal(err)
 	}
+	if string(s.Tag[:]) != "PWS3" {
+		log.Fatal("Header tag missing")
+	}
+
 	fmt.Printf("%#v\n", s)
 }
