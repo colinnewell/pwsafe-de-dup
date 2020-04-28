@@ -12,6 +12,13 @@ type HeaderV3 struct {
 	B1B2 [32]byte
 	B3B4 [32]byte
 
-	IV [16]byte
+	IV     [16]byte
+	Header [16]byte
 	// https://github.com/pwsafe/pwsafe/blob/master/docs/formatV3.txt
+}
+
+type Record struct {
+	Length uint32
+	Type   byte
+	Raw    []byte
 }

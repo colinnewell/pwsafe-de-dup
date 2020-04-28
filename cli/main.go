@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -100,4 +102,22 @@ func main() {
 
 	e.Decrypt(s.B3B4[0:16], s.B3B4[0:16])
 	e.Decrypt(s.B3B4[16:], s.B3B4[16:])
+
+	if string(s.Header[:]) == "PWS3-EOFPWS3-EOF" {
+		return
+	}
+	hm := hmac.New(sha256.New, s.B3B4[:])
+
+	k, err := twofish.NewCipher(s.B1B2[:])
+
+	mode := cipher.NewCBCDecrypter(k, s.IV[:])
+	var header [16]byte
+	mode.CryptBlocks(header[:], s.Header[:])
+
+	record := pwsafe.Record{}
+	binary.Read(header[0:5], binary.LittleEndian, &record)
+	// start with headers until we hit the 0xff
+	// then onto regular records
+	// now read the records
+	// then we get to a
 }
