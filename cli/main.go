@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
+	"syscall"
 	"unsafe"
 
 	"github.com/colinnewell/pwsafe-de-dup"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func readNextBytes(file *os.File, number int) ([]byte, error) {
@@ -59,5 +62,28 @@ func main() {
 		log.Fatal("Header tag missing")
 	}
 
-	fmt.Printf("%#v\n", s)
+	if s.ITER < 2048 {
+		log.Fatal("Iterations too small")
+	}
+
+	fmt.Print("Enter Password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatal(err)
+	}
+	h := sha256.New()
+	h.Write(bytePassword)
+	h.Write(s.Salt[:])
+	hp := h.Sum(nil)
+	for i := uint32(0); i <= s.ITER; i++ {
+		h = sha256.New()
+		h.Write(hp)
+		hp = h.Sum(nil)
+	}
+	if bytes.Compare(hp, s.HP[:]) != 0 {
+		log.Fatal("Password incorrect")
+	}
+
+	fmt.Println("")
+	fmt.Println("Password OK")
 }
