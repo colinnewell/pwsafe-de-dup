@@ -24,7 +24,7 @@ func readNextBytes(file *os.File, number int) ([]byte, error) {
 
 func main() {
 	fmt.Println("vim-go")
-	s := pwsafe.PWSafeV3{}
+	s := pwsafe.HeaderV3{}
 
 	files := os.Args[1:]
 	if len(files) == 0 {

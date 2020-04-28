@@ -1,10 +1,10 @@
 package pwsafe
 
-// PWSafeV3 Password Safe V3 header
+// HeaderV3 Password Safe V3 header
 // min size 232
 // check for PWS3
 // should have EOF block PWS3-EOF
-type PWSafeV3 struct {
+type HeaderV3 struct {
 	Tag  [4]byte
 	Salt [32]byte
 	ITER uint32 // should be > 2048
