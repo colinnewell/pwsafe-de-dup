@@ -12,6 +12,7 @@ import (
 
 	"github.com/colinnewell/pwsafe-de-dup"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/twofish"
 )
 
 func readNextBytes(file *os.File, number int) ([]byte, error) {
@@ -74,16 +75,29 @@ func main() {
 	h := sha256.New()
 	h.Write(bytePassword)
 	h.Write(s.Salt[:])
-	hp := h.Sum(nil)
-	for i := uint32(0); i <= s.ITER; i++ {
+	p := h.Sum(nil)
+	for i := uint32(0); i < s.ITER; i++ {
 		h = sha256.New()
-		h.Write(hp)
-		hp = h.Sum(nil)
+		h.Write(p)
+		p = h.Sum(nil)
 	}
+	h = sha256.New()
+	h.Write(p)
+	hp := h.Sum(nil)
 	if bytes.Compare(hp, s.HP[:]) != 0 {
 		log.Fatal("Password incorrect")
 	}
 
 	fmt.Println("")
 	fmt.Println("Password OK")
+
+	e, err := twofish.NewCipher(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+	e.Decrypt(s.B1B2[0:16], s.B1B2[0:16])
+	e.Decrypt(s.B1B2[16:], s.B1B2[16:])
+
+	e.Decrypt(s.B3B4[0:16], s.B3B4[0:16])
+	e.Decrypt(s.B3B4[16:], s.B3B4[16:])
 }
