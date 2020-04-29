@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/colinnewell/pwsafe-de-dup"
+	pwsafe "github.com/colinnewell/pwsafe-de-dup"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/crypto/twofish"
 )
@@ -29,7 +29,6 @@ func readNextBytes(file *os.File, number int) ([]byte, error) {
 }
 
 func main() {
-	fmt.Println("vim-go")
 	s := pwsafe.HeaderV3{}
 
 	files := os.Args[1:]
@@ -115,7 +114,7 @@ func main() {
 	mode.CryptBlocks(header[:], s.Header[:])
 
 	record := pwsafe.Record{}
-	binary.Read(header[0:5], binary.LittleEndian, &record)
+	binary.Read(bytes.NewBuffer(header[0:5]), binary.LittleEndian, &record)
 	// start with headers until we hit the 0xff
 	// then onto regular records
 	// now read the records
