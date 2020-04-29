@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -85,7 +86,7 @@ func main() {
 	h = sha256.New()
 	h.Write(p)
 	hp := h.Sum(nil)
-	if bytes.Compare(hp, s.HP[:]) != 0 {
+	if subtle.ConstantTimeCompare(hp, s.HP[:]) == 0 {
 		log.Fatal("Password incorrect")
 	}
 
