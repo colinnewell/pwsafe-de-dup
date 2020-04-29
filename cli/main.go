@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/cipher"
-	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/binary"
@@ -106,7 +105,7 @@ func main() {
 	if string(s.Header[:]) == "PWS3-EOFPWS3-EOF" {
 		return
 	}
-	hm := hmac.New(sha256.New, s.B3B4[:])
+	//hm := hmac.New(sha256.New, s.B3B4[:])
 
 	k, err := twofish.NewCipher(s.B1B2[:])
 
@@ -116,6 +115,31 @@ func main() {
 
 	record := pwsafe.Record{}
 	binary.Read(bytes.NewBuffer(header[0:5]), binary.LittleEndian, &record)
+
+	fmt.Printf("Length: %d, Type: %d\n", record.Length, record.Type)
+
+	dump, err := os.Create("unencrypted.dump")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dump.Close()
+	dump.Write(header[:])
+
+	read := 16
+	for chunk := [16]byte{}; read > 0; read, err = file.Read(chunk[:]) {
+		if string(chunk[:]) == "PWS3-EOFPWS3-EOF" {
+			break
+		}
+		if read < 16 || err != nil {
+			break
+		}
+		mode.CryptBlocks(chunk[:], chunk[:])
+		dump.Write(chunk[:])
+	}
+	if err != nil {
+		// probably check for EoF
+		log.Fatal(err)
+	}
 	// start with headers until we hit the 0xff
 	// then onto regular records
 	// now read the records
