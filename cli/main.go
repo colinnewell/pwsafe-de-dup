@@ -111,14 +111,9 @@ func main() {
 
 	mode := cipher.NewCBCDecrypter(k, s.IV[:])
 
-	dump, err := os.Create("unencrypted.dump")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer dump.Close()
-
 	read := 16
 	chunk := [16]byte{}
+	headers := true
 	for {
 		read, err = file.Read(chunk[:])
 		if read < 16 || err != nil {
@@ -133,9 +128,6 @@ func main() {
 		err = binary.Read(bytes.NewBuffer(chunk[:]), binary.LittleEndian, &record)
 		if err != nil {
 			log.Fatal(err)
-		}
-		if record.Type == 0xff {
-			break
 		}
 
 		raw_data := make([]byte, record.Length)
@@ -165,10 +157,13 @@ func main() {
 			copy(raw_data, record.Raw[:record.Length])
 		}
 
-		fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
-		_, err = dump.Write(chunk[:])
-		if err != nil {
-			log.Fatal(err)
+		if record.Type == 0xff {
+			headers = false
+		}
+		if headers {
+			fmt.Printf("Header %d: %d: %#v\n", record.Length, record.Type, raw_data)
+		} else {
+			fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
 		}
 	}
 	if err != nil {
