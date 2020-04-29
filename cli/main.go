@@ -102,39 +102,74 @@ func main() {
 	e.Decrypt(s.B3B4[0:16], s.B3B4[0:16])
 	e.Decrypt(s.B3B4[16:], s.B3B4[16:])
 
-	if string(s.Header[:]) == "PWS3-EOFPWS3-EOF" {
-		return
-	}
 	//hm := hmac.New(sha256.New, s.B3B4[:])
 
 	k, err := twofish.NewCipher(s.B1B2[:])
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mode := cipher.NewCBCDecrypter(k, s.IV[:])
-	var header [16]byte
-	mode.CryptBlocks(header[:], s.Header[:])
-
-	record := pwsafe.Record{}
-	binary.Read(bytes.NewBuffer(header[0:5]), binary.LittleEndian, &record)
-
-	fmt.Printf("Length: %d, Type: %d\n", record.Length, record.Type)
 
 	dump, err := os.Create("unencrypted.dump")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer dump.Close()
-	dump.Write(header[:])
 
 	read := 16
-	for chunk := [16]byte{}; read > 0; read, err = file.Read(chunk[:]) {
-		if string(chunk[:]) == "PWS3-EOFPWS3-EOF" {
-			break
-		}
+	chunk := [16]byte{}
+	for {
+		read, err = file.Read(chunk[:])
 		if read < 16 || err != nil {
 			break
 		}
+		if string(chunk[:]) == "PWS3-EOFPWS3-EOF" {
+			break
+		}
 		mode.CryptBlocks(chunk[:], chunk[:])
-		dump.Write(chunk[:])
+
+		record := pwsafe.Record{}
+		err = binary.Read(bytes.NewBuffer(chunk[:]), binary.LittleEndian, &record)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if record.Type == 0xff {
+			break
+		}
+
+		raw_data := make([]byte, record.Length)
+		if record.Length >= 11 {
+			needed := record.Length - 11
+			copy(raw_data, record.Raw[:])
+			start := 11
+			for needed > 0 {
+				read, err = file.Read(chunk[:])
+				if read < 16 || err != nil {
+					break
+				}
+				mode.CryptBlocks(chunk[:], chunk[:])
+				if needed > 16 {
+					copy(raw_data[start:], chunk[:])
+				} else {
+					copy(raw_data[start:], chunk[:needed-1])
+				}
+				if needed >= 16 {
+					needed -= 16
+				} else {
+					needed = 0
+				}
+				start += 16
+			}
+		} else {
+			copy(raw_data, record.Raw[:record.Length])
+		}
+
+		fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
+		_, err = dump.Write(chunk[:])
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	if err != nil {
 		// probably check for EoF
