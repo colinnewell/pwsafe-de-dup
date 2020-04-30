@@ -145,7 +145,7 @@ func main() {
 				if needed > 16 {
 					copy(raw_data[start:], chunk[:])
 				} else {
-					copy(raw_data[start:], chunk[:needed-1])
+					copy(raw_data[start:], chunk[:needed])
 				}
 				if needed >= 16 {
 					needed -= 16
