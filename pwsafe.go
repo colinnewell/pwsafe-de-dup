@@ -4,17 +4,16 @@ import (
 	"bytes"
 	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/crypto/twofish"
 )
 
@@ -91,14 +90,10 @@ type PasswordRecord struct {
 	Fields map[byte]Field
 }
 
-// fileHeader Password Safe V3 header
-// min size 232
-// check for PWS3
-// should have EOF block PWS3-EOF
 type fileHeader struct {
 	Tag  [4]byte
 	Salt [32]byte
-	ITER uint32 // should be > 2048
+	ITER uint32
 	HP   [32]byte
 	B1B2 [32]byte
 	B3B4 [32]byte
@@ -311,7 +306,7 @@ func NewHeader(typeID byte, rawData []byte) (HeaderRecord, error) {
 	return HeaderRecord{Type: typeID, Data: data}, nil
 }
 
-func Load(file *os.File) (V3File, error) {
+func Load(file *os.File, password []byte) (V3File, error) {
 	info, err := file.Stat()
 	if err != nil {
 		return V3File{}, err
@@ -346,13 +341,8 @@ func Load(file *os.File) (V3File, error) {
 		return V3File{}, fmt.Errorf("Iterations too small")
 	}
 
-	fmt.Print("Enter Password: ")
-	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return V3File{}, err
-	}
 	h := sha256.New()
-	h.Write(bytePassword)
+	h.Write(password)
 	h.Write(s.Salt[:])
 	p := h.Sum(nil)
 	for i := uint32(0); i < s.ITER; i++ {
@@ -476,4 +466,28 @@ func Load(file *os.File) (V3File, error) {
 	}
 
 	return V3File{Headers: headerList, Passwords: passwords}, nil
+}
+
+func (p *V3File) Write(file *os.File, password []byte) error {
+	s := fileHeader{}
+	size := unsafe.Sizeof(s)
+	randomData := make([]byte, size)
+	read, err := rand.Read(randomData)
+	if err != nil {
+		return err
+	}
+	if read < int(size) {
+		return fmt.Errorf("Failed to read enough random data")
+	}
+
+	buffer := bytes.NewBuffer(randomData)
+	if err := binary.Read(buffer, binary.LittleEndian, &s); err != nil {
+		return err
+	}
+
+	s.ITER = 2048
+	copy(s.Tag[:], []byte("PWS3"))
+	// re-hash the password
+
+	return nil
 }
