@@ -49,9 +49,50 @@ const (
 	WhatPerformedLastSave    = 0x06
 	WhoPerformedLastSave     = 0x05
 	Yubico                   = 0x12
+
+	// record types
+	Autotype                 = 0x0e
+	CreationTime             = 0x07
+	CreditCardExpiration     = 0x1d
+	CreditCardNumber         = 0x1c
+	CreditCardPIN            = 0x1f
+	CreditCardVerifValue     = 0x1e
+	DoubleClickAction        = 0x13
+	EMailAddress             = 0x14
+	EntryKeyboardShortcut    = 0x19
+	Group                    = 0x02
+	LastAccessTime           = 0x09
+	LastModificationTime     = 0x0c
+	Notes                    = 0x05
+	OwnSymbolsForPassword    = 0x16
+	Password                 = 0x06
+	PasswordExpiryInterval   = 0x11
+	PasswordExpiryTime       = 0x0a
+	PasswordHistory          = 0x0f
+	PasswordModificationTime = 0x08
+	PasswordPolicy           = 0x10
+	PasswordPolicyName       = 0x18
+	ProtectedEntry           = 0x15
+	QRCode                   = 0x20
+	RunCommand               = 0x12
+	ShiftDoubleClickAction   = 0x17
+	Title                    = 0x03
+	TwoFactorKey             = 0x1b
+	URL                      = 0x0d
+	Username                 = 0x04
 )
 
 type HeaderRecord struct {
+	Type byte
+	Data interface{}
+}
+
+type PasswordRecord struct {
+	// this makes the assumption that you can only have one field of each type.
+	Fields map[byte]Field
+}
+
+type Field struct {
 	Type byte
 	Data interface{}
 }
@@ -101,30 +142,30 @@ func (h *HeaderRecord) String() string {
 	return fmt.Sprintf("%s: %v", typename, h.Data)
 }
 
-func NewHeader(typeID byte, raw_data []byte) (HeaderRecord, error) {
+func NewHeader(typeID byte, rawData []byte) (HeaderRecord, error) {
 	var data interface{}
 	switch typeID {
 	case Version:
 		// 2 bytes, major/minor
-		data = fmt.Sprintf("%d.%d", raw_data[1], raw_data[0])
+		data = fmt.Sprintf("%d.%d", rawData[1], rawData[0])
 	case UUID:
 		// uuid
 		var err error
-		data, err = uuid.FromBytes(raw_data)
+		data, err = uuid.FromBytes(rawData)
 		if err != nil {
 			return HeaderRecord{}, err
 		}
 	case TimestampOfLastSave, LastMasterPasswordChange:
 		// time_t
-		data = binary.LittleEndian.Uint32(raw_data[:])
+		data = binary.LittleEndian.Uint32(rawData[:])
 	case DatabaseDescription, DatabaseFilters, DatabaseName, EmptyGroups,
 		EndOfEntry, LastSavedByUser, LastSavedOnHost, NamedPasswordPolicies,
 		NondefaultPreferences, RecentlyUsedEntries, TreeDisplayStatus,
 		WhatPerformedLastSave, WhoPerformedLastSave, Yubico:
 		// string
-		data = string(raw_data)
+		data = string(rawData)
 	default:
-		data = raw_data
+		data = rawData
 	}
 	return HeaderRecord{Type: typeID, Data: data}, nil
 }
