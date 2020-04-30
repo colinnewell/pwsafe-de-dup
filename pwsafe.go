@@ -92,6 +92,41 @@ type PasswordRecord struct {
 	Fields map[byte]Field
 }
 
+func New() PasswordRecord {
+	return PasswordRecord{Fields: make(map[byte]Field)}
+}
+
+func (p *PasswordRecord) AddField(typeID byte, rawData []byte) error {
+	var data interface{}
+	switch typeID {
+	case UUID:
+		// uuid
+		var err error
+		data, err = uuid.FromBytes(rawData)
+		if err != nil {
+			return err
+		}
+	case CreationTime, PasswordModificationTime, LastAccessTime,
+		PasswordExpiryTime, LastModificationTime:
+		// time_t
+		data = binary.LittleEndian.Uint32(rawData[:])
+	case Group, Autotype, CreditCardExpiration, CreditCardNumber,
+		CreditCardPIN, CreditCardVerifValue, EMailAddress, Notes,
+		OwnSymbolsForPassword, Password, PasswordHistory, PasswordPolicy,
+		PasswordPolicyName, QRCode, RunCommand, Title, URL, Username:
+		// string
+		data = string(rawData)
+	default:
+		// there are various types we know about that are
+		// binary so we're letting them come here as well
+		// as things we're not aware of
+		data = rawData
+	}
+
+	p.Fields[typeID] = Field{Type: typeID, Data: data}
+	return nil
+}
+
 type Field struct {
 	Type byte
 	Data interface{}
