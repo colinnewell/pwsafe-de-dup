@@ -1,12 +1,21 @@
 package pwsafe
 
 import (
+	"bytes"
+	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/twofish"
 )
 
 const (
@@ -61,6 +70,11 @@ const (
 	URL                      = 0x0d
 	Username                 = 0x04
 )
+
+type V3File struct {
+	Headers   []HeaderRecord
+	Passwords []PasswordRecord
+}
 
 // HeaderV3 Password Safe V3 header
 // min size 232
@@ -295,4 +309,171 @@ func NewHeader(typeID byte, rawData []byte) (HeaderRecord, error) {
 		data = rawData
 	}
 	return HeaderRecord{Type: typeID, Data: data}, nil
+}
+
+func Load(file *os.File) (V3File, error) {
+	info, err := file.Stat()
+	if err != nil {
+		return V3File{}, err
+	}
+	if info.Size() < 232 {
+		return V3File{}, fmt.Errorf("File truncated")
+	}
+
+	defer file.Close()
+
+	s := HeaderV3{}
+	size := unsafe.Sizeof(s)
+	data := make([]byte, size)
+	read, err := file.Read(data)
+	if err != nil {
+		return V3File{}, err
+	}
+	if read < int(size) {
+		return V3File{}, fmt.Errorf("Failed to read enough of the file")
+	}
+
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.LittleEndian, &s); err != nil {
+		return V3File{}, err
+	}
+	if string(s.Tag[:]) != "PWS3" {
+		return V3File{}, fmt.Errorf("Header tag missing")
+	}
+
+	if s.ITER < 2048 {
+		return V3File{}, fmt.Errorf("Iterations too small")
+	}
+
+	fmt.Print("Enter Password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return V3File{}, err
+	}
+	h := sha256.New()
+	h.Write(bytePassword)
+	h.Write(s.Salt[:])
+	p := h.Sum(nil)
+	for i := uint32(0); i < s.ITER; i++ {
+		h = sha256.New()
+		h.Write(p)
+		p = h.Sum(nil)
+	}
+	h = sha256.New()
+	h.Write(p)
+	hp := h.Sum(nil)
+	if subtle.ConstantTimeCompare(hp, s.HP[:]) == 0 {
+		return V3File{}, fmt.Errorf("Password incorrect")
+	}
+
+	fmt.Println("")
+
+	e, err := twofish.NewCipher(p)
+	if err != nil {
+		return V3File{}, err
+	}
+	e.Decrypt(s.B1B2[0:16], s.B1B2[0:16])
+	e.Decrypt(s.B1B2[16:], s.B1B2[16:])
+
+	e.Decrypt(s.B3B4[0:16], s.B3B4[0:16])
+	e.Decrypt(s.B3B4[16:], s.B3B4[16:])
+
+	hm := hmac.New(sha256.New, s.B3B4[:])
+
+	k, err := twofish.NewCipher(s.B1B2[:])
+	if err != nil {
+		return V3File{}, err
+	}
+
+	mode := cipher.NewCBCDecrypter(k, s.IV[:])
+
+	chunk := [16]byte{}
+	var headerList []HeaderRecord
+
+	var pwRecord *PasswordRecord
+	var passwords []PasswordRecord
+	for {
+		read, err := file.Read(chunk[:])
+		if read < 16 || err != nil {
+			break
+		}
+		if string(chunk[:]) == "PWS3-EOFPWS3-EOF" {
+			break
+		}
+		mode.CryptBlocks(chunk[:], chunk[:])
+
+		record := Record{}
+		err = binary.Read(bytes.NewBuffer(chunk[:]), binary.LittleEndian, &record)
+		if err != nil {
+			return V3File{}, err
+		}
+
+		raw_data := make([]byte, record.Length)
+		if record.Length >= 11 {
+			needed := record.Length - 11
+			copy(raw_data, record.Raw[:])
+			start := 11
+			for needed > 0 {
+				read, err = file.Read(chunk[:])
+				if read < 16 || err != nil {
+					break
+				}
+				mode.CryptBlocks(chunk[:], chunk[:])
+
+				if needed > 16 {
+					copy(raw_data[start:], chunk[:])
+				} else {
+					copy(raw_data[start:], chunk[:needed])
+				}
+				if needed >= 16 {
+					needed -= 16
+				} else {
+					needed = 0
+				}
+				start += 16
+			}
+		} else {
+			copy(raw_data, record.Raw[:record.Length])
+		}
+		hm.Write(raw_data)
+
+		if record.Type == 0xff {
+			if pwRecord != nil {
+				passwords = append(passwords, *pwRecord)
+			}
+			rec := NewPasswordRecord()
+			pwRecord = &rec
+			continue
+		}
+		if pwRecord == nil {
+			h, err := NewHeader(record.Type, raw_data)
+			if err != nil {
+				return V3File{}, err
+			}
+			headerList = append(headerList, h)
+		} else {
+			err := pwRecord.AddField(record.Type, raw_data)
+			if err != nil {
+				return V3File{}, err
+			}
+		}
+	}
+	if err != nil {
+		return V3File{}, err
+	}
+	var storedHMAC [32]byte
+	read, err = file.Read(storedHMAC[:])
+	if err != nil {
+		return V3File{}, err
+	}
+	if read < 32 {
+		return V3File{}, fmt.Errorf("Missed hmac")
+	}
+	actualHMAC := hm.Sum(nil)
+	if !hmac.Equal(actualHMAC, storedHMAC[:]) {
+		return V3File{}, fmt.Errorf("HMAC doesn't match")
+	}
+
+	return V3File{Headers: headerList, Passwords: passwords}, nil
 }
