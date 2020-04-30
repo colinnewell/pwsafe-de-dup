@@ -120,7 +120,8 @@ func main() {
 	}
 	defer dump.Close()
 
-	headers := true
+	var pwRecord *pwsafe.PasswordRecord
+	var passwords []pwsafe.PasswordRecord
 	for {
 		read, err := file.Read(chunk[:])
 		if read < 16 || err != nil {
@@ -181,9 +182,14 @@ func main() {
 		hm.Sum(raw_data)
 
 		if record.Type == 0xff {
-			headers = false
+			if pwRecord != nil {
+				passwords = append(passwords, *pwRecord)
+			}
+			rec := pwsafe.NewPasswordRecord()
+			pwRecord = &rec
+			continue
 		}
-		if headers {
+		if pwRecord == nil {
 			h, err := pwsafe.NewHeader(record.Type, raw_data)
 			if err != nil {
 				log.Fatal(err)
@@ -191,8 +197,15 @@ func main() {
 			fmt.Printf("Header %s\n", h.String())
 			headerList = append(headerList, h)
 		} else {
-			fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
+			err := pwRecord.AddField(record.Type, raw_data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
 		}
+	}
+	for _, p := range passwords {
+		fmt.Println(p.String())
 	}
 	if err != nil {
 		// probably check for EoF

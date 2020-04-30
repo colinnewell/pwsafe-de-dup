@@ -3,6 +3,7 @@ package pwsafe
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -92,8 +93,87 @@ type PasswordRecord struct {
 	Fields map[byte]Field
 }
 
-func New() PasswordRecord {
+func (p *PasswordRecord) String() string {
+	var b strings.Builder
+	b.WriteString("PasswordRecord:\n")
+	for _, v := range p.Fields {
+		b.WriteString(v.String())
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+func NewPasswordRecord() PasswordRecord {
 	return PasswordRecord{Fields: make(map[byte]Field)}
+}
+
+func (f *Field) String() string {
+	var typename string
+	switch f.Type {
+	case Autotype:
+		typename = "Autotype"
+	case CreationTime:
+		typename = "CreationTime"
+	case CreditCardExpiration:
+		typename = "CreditCardExpiration"
+	case CreditCardNumber:
+		typename = "CreditCardNumber"
+	case CreditCardPIN:
+		typename = "CreditCardPIN"
+	case CreditCardVerifValue:
+		typename = "CreditCardVerifValue"
+	case DoubleClickAction:
+		typename = "DoubleClickAction"
+	case EMailAddress:
+		typename = "EMailAddress"
+	case EntryKeyboardShortcut:
+		typename = "EntryKeyboardShortcut"
+	case Group:
+		typename = "Group"
+	case LastAccessTime:
+		typename = "LastAccessTime"
+	case LastModificationTime:
+		typename = "LastModificationTime"
+	case Notes:
+		typename = "Notes"
+	case OwnSymbolsForPassword:
+		typename = "OwnSymbolsForPassword"
+	case Password:
+		typename = "Password"
+	case PasswordExpiryInterval:
+		typename = "PasswordExpiryInterval"
+	case PasswordExpiryTime:
+		typename = "PasswordExpiryTime"
+	case PasswordHistory:
+		typename = "PasswordHistory"
+	case PasswordModificationTime:
+		typename = "PasswordModificationTime"
+	case PasswordPolicy:
+		typename = "PasswordPolicy"
+	case PasswordPolicyName:
+		typename = "PasswordPolicyName"
+	case ProtectedEntry:
+		typename = "ProtectedEntry"
+	case QRCode:
+		typename = "QRCode"
+	case RunCommand:
+		typename = "RunCommand"
+	case ShiftDoubleClickAction:
+		typename = "ShiftDoubleClickAction"
+	case Title:
+		typename = "Title"
+	case TwoFactorKey:
+		typename = "TwoFactorKey"
+	case URL:
+		typename = "URL"
+	case Username:
+		typename = "Username"
+	case UUID:
+		typename = "UUID"
+	default:
+		typename = fmt.Sprintf("Unknown (%d)", f.Type)
+	}
+	return fmt.Sprintf("%s: %v", typename, f.Data)
 }
 
 func (p *PasswordRecord) AddField(typeID byte, rawData []byte) error {
