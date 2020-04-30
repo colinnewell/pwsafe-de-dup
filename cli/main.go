@@ -131,13 +131,6 @@ func main() {
 		}
 		mode.CryptBlocks(chunk[:], chunk[:])
 
-		// FIXME: remove
-		_, err = dump.Write(chunk[:])
-		if err != nil {
-			log.Fatal(err)
-		}
-		////
-
 		record := pwsafe.Record{}
 		err = binary.Read(bytes.NewBuffer(chunk[:]), binary.LittleEndian, &record)
 		if err != nil {
@@ -155,13 +148,6 @@ func main() {
 					break
 				}
 				mode.CryptBlocks(chunk[:], chunk[:])
-
-				// FIXME: remove
-				_, err = dump.Write(chunk[:])
-				if err != nil {
-					log.Fatal(err)
-				}
-				////
 
 				if needed > 16 {
 					copy(raw_data[start:], chunk[:])
@@ -199,7 +185,6 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			//fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
 		}
 	}
 	if err != nil {
@@ -227,5 +212,4 @@ func main() {
 	for _, p := range passwords {
 		fmt.Println(p.String())
 	}
-	// FIXME: grab the hmac from the end of the file and compare with hm
 }
