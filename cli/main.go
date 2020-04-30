@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/binary"
@@ -102,7 +103,7 @@ func main() {
 	e.Decrypt(s.B3B4[0:16], s.B3B4[0:16])
 	e.Decrypt(s.B3B4[16:], s.B3B4[16:])
 
-	//hm := hmac.New(sha256.New, s.B3B4[:])
+	hm := hmac.New(sha256.New, s.B3B4[:])
 
 	k, err := twofish.NewCipher(s.B1B2[:])
 	if err != nil {
@@ -111,11 +112,10 @@ func main() {
 
 	mode := cipher.NewCBCDecrypter(k, s.IV[:])
 
-	read := 16
 	chunk := [16]byte{}
 	headers := true
 	for {
-		read, err = file.Read(chunk[:])
+		read, err := file.Read(chunk[:])
 		if read < 16 || err != nil {
 			break
 		}
@@ -156,6 +156,7 @@ func main() {
 		} else {
 			copy(raw_data, record.Raw[:record.Length])
 		}
+		hm.Sum(raw_data)
 
 		if record.Type == 0xff {
 			headers = false
@@ -170,8 +171,6 @@ func main() {
 		// probably check for EoF
 		log.Fatal(err)
 	}
-	// start with headers until we hit the 0xff
-	// then onto regular records
-	// now read the records
-	// then we get to a
+
+	// FIXME: grab the hmac from the end of the file and compare with hm
 }
