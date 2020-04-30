@@ -113,6 +113,7 @@ func main() {
 	mode := cipher.NewCBCDecrypter(k, s.IV[:])
 
 	chunk := [16]byte{}
+	var headerList []pwsafe.HeaderRecord
 	headers := true
 	for {
 		read, err := file.Read(chunk[:])
@@ -162,7 +163,12 @@ func main() {
 			headers = false
 		}
 		if headers {
-			fmt.Printf("Header %d: %d: %#v\n", record.Length, record.Type, raw_data)
+			h, err := pwsafe.NewHeader(record.Type, raw_data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("Header %d: %#v\n", h.Type, h.Data)
+			headerList = append(headerList, h)
 		} else {
 			fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
 		}

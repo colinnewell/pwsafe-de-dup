@@ -1,6 +1,7 @@
 package pwsafe
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -60,21 +61,24 @@ func NewHeader(typeID byte, raw_data []byte) (HeaderRecord, error) {
 	switch typeID {
 	case Version:
 		// 2 bytes, major/minor
-		data = fmt.Sprintf("%d.%d", raw_data[0], raw_data[1])
+		data = fmt.Sprintf("%d.%d", raw_data[1], raw_data[0])
 	case UUID:
 		// uuid
 		var err error
+		fmt.Printf("%#v\n", raw_data)
 		data, err = uuid.FromBytes(raw_data)
 		if err != nil {
 			return HeaderRecord{}, err
 		}
 	case TimestampOfLastSave, LastMasterPasswordChange:
 		// time_t
+		data = binary.LittleEndian.Uint32(raw_data[:])
 	case DatabaseDescription, DatabaseFilters, DatabaseName, EmptyGroups,
 		EndOfEntry, LastSavedByUser, LastSavedOnHost, NamedPasswordPolicies,
 		NondefaultPreferences, RecentlyUsedEntries, TreeDisplayStatus,
 		WhatPerformedLastSave, WhoPerformedLastSave, Yubico:
 		// string
+		data = string(raw_data)
 	default:
 		data = raw_data
 	}
