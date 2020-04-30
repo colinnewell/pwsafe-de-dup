@@ -468,7 +468,7 @@ func Load(file *os.File, password []byte) (V3File, error) {
 	return V3File{Headers: headerList, Passwords: passwords}, nil
 }
 
-func (p *V3File) Write(file *os.File, password []byte) error {
+func (v3 *V3File) Write(file *os.File, password []byte) error {
 	s := fileHeader{}
 	size := unsafe.Sizeof(s)
 	randomData := make([]byte, size)
@@ -487,7 +487,58 @@ func (p *V3File) Write(file *os.File, password []byte) error {
 
 	s.ITER = 2048
 	copy(s.Tag[:], []byte("PWS3"))
-	// re-hash the password
+
+	h := sha256.New()
+	h.Write(password)
+	h.Write(s.Salt[:])
+	p := h.Sum(nil)
+	for i := uint32(0); i < s.ITER; i++ {
+		h = sha256.New()
+		h.Write(p)
+		p = h.Sum(nil)
+	}
+	h = sha256.New()
+	h.Write(p)
+	hp := h.Sum(nil)
+	copy(s.HP[:], hp)
+
+	hm := hmac.New(sha256.New, s.B3B4[:])
+
+	k, err := twofish.NewCipher(s.B1B2[:])
+	if err != nil {
+		return err
+	}
+	mode := cipher.NewCBCDecrypter(k, s.IV[:])
+
+	// now we've setup the keys encrypt them before we store them.
+	e, err := twofish.NewCipher(p)
+	if err != nil {
+		return err
+	}
+	e.Encrypt(s.B1B2[0:16], s.B1B2[0:16])
+	e.Encrypt(s.B1B2[16:], s.B1B2[16:])
+
+	e.Encrypt(s.B3B4[0:16], s.B3B4[0:16])
+	e.Encrypt(s.B3B4[16:], s.B3B4[16:])
+
+	opBuffer := new(bytes.Buffer)
+	binary.Write(opBuffer, binary.LittleEndian, s)
+	file.Write(opBuffer.Bytes())
+
+	// that's the header done, now write the headers
+
+	// then write the password records
+
+	// then write the footer, the plain text EOF + hmac
+	_, err = file.Write([]byte("PWS3-EOFPWS3-EOF"))
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(hm.Sum(nil))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
