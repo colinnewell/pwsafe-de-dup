@@ -91,7 +91,6 @@ func main() {
 	}
 
 	fmt.Println("")
-	fmt.Println("Password OK")
 
 	e, err := twofish.NewCipher(p)
 	if err != nil {
@@ -179,7 +178,7 @@ func main() {
 		} else {
 			copy(raw_data, record.Raw[:record.Length])
 		}
-		hm.Sum(raw_data)
+		hm.Write(raw_data)
 
 		if record.Type == 0xff {
 			if pwRecord != nil {
@@ -194,7 +193,6 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("Header %s\n", h.String())
 			headerList = append(headerList, h)
 		} else {
 			err := pwRecord.AddField(record.Type, raw_data)
@@ -204,13 +202,30 @@ func main() {
 			//fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
 		}
 	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	var storedHMAC [32]byte
+	read, err := file.Read(storedHMAC[:])
+	if err != nil {
+		log.Fatal(err)
+	}
+	if read < 32 {
+		log.Fatal("Missed hmac")
+	}
+	actualHMAC := hm.Sum(nil)
+	if !hmac.Equal(actualHMAC, storedHMAC[:]) {
+		log.Fatal("HMAC doesn't match")
+	}
+
+	fmt.Println("=== Headers")
+	for _, h := range headerList {
+		fmt.Printf("%s\n", h.String())
+	}
+	fmt.Println("")
+	fmt.Println("=== Records")
 	for _, p := range passwords {
 		fmt.Println(p.String())
 	}
-	if err != nil {
-		// probably check for EoF
-		log.Fatal(err)
-	}
-
 	// FIXME: grab the hmac from the end of the file and compare with hm
 }
