@@ -1,6 +1,7 @@
 package pwsafe
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -105,6 +106,17 @@ func (p *PasswordRecord) String() string {
 
 func NewPasswordRecord() PasswordRecord {
 	return PasswordRecord{Fields: make(map[byte]Field)}
+}
+
+func (p *PasswordRecord) Sha256() [32]byte {
+	h := sha256.New()
+	for _, v := range p.Fields {
+		h.Write([]byte(v.String()))
+	}
+	var sha [32]byte
+	r := h.Sum(nil)
+	copy(sha[:], r)
+	return sha
 }
 
 func (f *Field) String() string {

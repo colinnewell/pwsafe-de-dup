@@ -113,11 +113,6 @@ func main() {
 
 	chunk := [16]byte{}
 	var headerList []pwsafe.HeaderRecord
-	dump, err := os.Create("unencrypted.dump")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer dump.Close()
 
 	var pwRecord *pwsafe.PasswordRecord
 	var passwords []pwsafe.PasswordRecord
@@ -209,7 +204,16 @@ func main() {
 	}
 	fmt.Println("")
 	fmt.Println("=== Records")
+	uuids := make(map[[32]byte]pwsafe.PasswordRecord)
+	totalPasswords := 0
 	for _, p := range passwords {
-		fmt.Println(p.String())
+		uuids[p.Sha256()] = p
+		totalPasswords++
 	}
+	uniquePasswords := 0
+	for _, v := range uuids {
+		fmt.Println(v.String())
+		uniquePasswords++
+	}
+	fmt.Printf("Total passwords %d, unique %d\n", totalPasswords, uniquePasswords)
 }
