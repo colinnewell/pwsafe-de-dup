@@ -76,11 +76,26 @@ type V3File struct {
 	Passwords []PasswordRecord
 }
 
-// HeaderV3 Password Safe V3 header
+type HeaderRecord struct {
+	Type byte
+	Data interface{}
+}
+
+type Field struct {
+	Type byte
+	Data interface{}
+}
+
+type PasswordRecord struct {
+	// this makes the assumption that you can only have one field of each type.
+	Fields map[byte]Field
+}
+
+// fileHeader Password Safe V3 header
 // min size 232
 // check for PWS3
 // should have EOF block PWS3-EOF
-type HeaderV3 struct {
+type fileHeader struct {
 	Tag  [4]byte
 	Salt [32]byte
 	ITER uint32 // should be > 2048
@@ -92,20 +107,10 @@ type HeaderV3 struct {
 	// https://github.com/pwsafe/pwsafe/blob/master/docs/formatV3.txt
 }
 
-type Record struct {
+type recordHeader struct {
 	Length uint32
 	Type   byte
 	Raw    [11]byte
-}
-
-type HeaderRecord struct {
-	Type byte
-	Data interface{}
-}
-
-type PasswordRecord struct {
-	// this makes the assumption that you can only have one field of each type.
-	Fields map[byte]Field
 }
 
 func (p *PasswordRecord) String() string {
@@ -233,11 +238,6 @@ func (p *PasswordRecord) AddField(typeID byte, rawData []byte) error {
 	return nil
 }
 
-type Field struct {
-	Type byte
-	Data interface{}
-}
-
 func (h *HeaderRecord) String() string {
 	var typename string
 	switch h.Type {
@@ -322,7 +322,7 @@ func Load(file *os.File) (V3File, error) {
 
 	defer file.Close()
 
-	s := HeaderV3{}
+	s := fileHeader{}
 	size := unsafe.Sizeof(s)
 	data := make([]byte, size)
 	read, err := file.Read(data)
@@ -403,7 +403,7 @@ func Load(file *os.File) (V3File, error) {
 		}
 		mode.CryptBlocks(chunk[:], chunk[:])
 
-		record := Record{}
+		record := recordHeader{}
 		err = binary.Read(bytes.NewBuffer(chunk[:]), binary.LittleEndian, &record)
 		if err != nil {
 			return V3File{}, err
