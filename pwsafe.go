@@ -409,10 +409,10 @@ func Load(file *os.File) (V3File, error) {
 			return V3File{}, err
 		}
 
-		raw_data := make([]byte, record.Length)
+		rawData := make([]byte, record.Length)
 		if record.Length >= 11 {
 			needed := record.Length - 11
-			copy(raw_data, record.Raw[:])
+			copy(rawData, record.Raw[:])
 			start := 11
 			for needed > 0 {
 				read, err = file.Read(chunk[:])
@@ -422,9 +422,9 @@ func Load(file *os.File) (V3File, error) {
 				mode.CryptBlocks(chunk[:], chunk[:])
 
 				if needed > 16 {
-					copy(raw_data[start:], chunk[:])
+					copy(rawData[start:], chunk[:])
 				} else {
-					copy(raw_data[start:], chunk[:needed])
+					copy(rawData[start:], chunk[:needed])
 				}
 				if needed >= 16 {
 					needed -= 16
@@ -434,9 +434,9 @@ func Load(file *os.File) (V3File, error) {
 				start += 16
 			}
 		} else {
-			copy(raw_data, record.Raw[:record.Length])
+			copy(rawData, record.Raw[:record.Length])
 		}
-		hm.Write(raw_data)
+		hm.Write(rawData)
 
 		if record.Type == 0xff {
 			if pwRecord != nil {
@@ -447,13 +447,13 @@ func Load(file *os.File) (V3File, error) {
 			continue
 		}
 		if pwRecord == nil {
-			h, err := NewHeader(record.Type, raw_data)
+			h, err := NewHeader(record.Type, rawData)
 			if err != nil {
 				return V3File{}, err
 			}
 			headerList = append(headerList, h)
 		} else {
-			err := pwRecord.AddField(record.Type, raw_data)
+			err := pwRecord.AddField(record.Type, rawData)
 			if err != nil {
 				return V3File{}, err
 			}
