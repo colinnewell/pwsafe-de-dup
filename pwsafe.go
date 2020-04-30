@@ -57,7 +57,6 @@ type HeaderRecord struct {
 }
 
 func (h *HeaderRecord) String() string {
-
 	var typename string
 	switch h.Type {
 	case DatabaseDescription:
