@@ -56,6 +56,52 @@ type HeaderRecord struct {
 	Data interface{}
 }
 
+func (h *HeaderRecord) String() string {
+
+	var typename string
+	switch h.Type {
+	case DatabaseDescription:
+		typename = "DatabaseDescription"
+	case DatabaseFilters:
+		typename = "DatabaseFilters"
+	case DatabaseName:
+		typename = "DatabaseName"
+	case EmptyGroups:
+		typename = "EmptyGroups"
+	case EndOfEntry:
+		typename = "EndOfEntry"
+	case LastMasterPasswordChange:
+		typename = "LastMasterPasswordChange"
+	case LastSavedByUser:
+		typename = "LastSavedByUser"
+	case LastSavedOnHost:
+		typename = "LastSavedOnHost"
+	case NamedPasswordPolicies:
+		typename = "NamedPasswordPolicies"
+	case NondefaultPreferences:
+		typename = "NondefaultPreferences"
+	case RecentlyUsedEntries:
+		typename = "RecentlyUsedEntries"
+	case TimestampOfLastSave:
+		typename = "TimestampOfLastSave"
+	case TreeDisplayStatus:
+		typename = "TreeDisplayStatus"
+	case UUID:
+		typename = "UUID"
+	case Version:
+		typename = "Version"
+	case WhatPerformedLastSave:
+		typename = "WhatPerformedLastSave"
+	case WhoPerformedLastSave:
+		typename = "WhoPerformedLastSave"
+	case Yubico:
+		typename = "Yubico"
+	default:
+		typename = fmt.Sprintf("Unknown (%d)", h.Type)
+	}
+	return fmt.Sprintf("%s: %v", typename, h.Data)
+}
+
 func NewHeader(typeID byte, raw_data []byte) (HeaderRecord, error) {
 	var data interface{}
 	switch typeID {
@@ -65,7 +111,6 @@ func NewHeader(typeID byte, raw_data []byte) (HeaderRecord, error) {
 	case UUID:
 		// uuid
 		var err error
-		fmt.Printf("%#v\n", raw_data)
 		data, err = uuid.FromBytes(raw_data)
 		if err != nil {
 			return HeaderRecord{}, err

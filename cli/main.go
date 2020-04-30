@@ -114,6 +114,12 @@ func main() {
 
 	chunk := [16]byte{}
 	var headerList []pwsafe.HeaderRecord
+	dump, err := os.Create("unencrypted.dump")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dump.Close()
+
 	headers := true
 	for {
 		read, err := file.Read(chunk[:])
@@ -124,6 +130,13 @@ func main() {
 			break
 		}
 		mode.CryptBlocks(chunk[:], chunk[:])
+
+		// FIXME: remove
+		_, err = dump.Write(chunk[:])
+		if err != nil {
+			log.Fatal(err)
+		}
+		////
 
 		record := pwsafe.Record{}
 		err = binary.Read(bytes.NewBuffer(chunk[:]), binary.LittleEndian, &record)
@@ -142,6 +155,14 @@ func main() {
 					break
 				}
 				mode.CryptBlocks(chunk[:], chunk[:])
+
+				// FIXME: remove
+				_, err = dump.Write(chunk[:])
+				if err != nil {
+					log.Fatal(err)
+				}
+				////
+
 				if needed > 16 {
 					copy(raw_data[start:], chunk[:])
 				} else {
@@ -167,7 +188,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("Header %d: %#v\n", h.Type, h.Data)
+			fmt.Printf("Header %s\n", h.String())
 			headerList = append(headerList, h)
 		} else {
 			fmt.Printf("%d: %d: %#v\n", record.Length, record.Type, raw_data)
