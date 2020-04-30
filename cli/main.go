@@ -18,17 +18,6 @@ import (
 	"golang.org/x/crypto/twofish"
 )
 
-func readNextBytes(file *os.File, number int) ([]byte, error) {
-	bytes := make([]byte, number)
-
-	_, err := file.Read(bytes)
-	if err != nil {
-		return bytes, err
-	}
-
-	return bytes, nil
-}
-
 func main() {
 	s := pwsafe.HeaderV3{}
 
@@ -51,9 +40,14 @@ func main() {
 	}
 
 	defer file.Close()
-	data, err := readNextBytes(file, int(unsafe.Sizeof(s)))
+	size := unsafe.Sizeof(s)
+	data := make([]byte, size)
+	read, err := file.Read(data)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if read < int(size) {
+		log.Fatal("Failed to read enough of the file")
 	}
 
 	buffer := bytes.NewBuffer(data)
@@ -186,7 +180,7 @@ func main() {
 		log.Fatal(err)
 	}
 	var storedHMAC [32]byte
-	read, err := file.Read(storedHMAC[:])
+	read, err = file.Read(storedHMAC[:])
 	if err != nil {
 		log.Fatal(err)
 	}
