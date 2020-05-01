@@ -20,6 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error while opening file", err)
 	}
+	defer file.Close()
 
 	fmt.Print("Enter Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -53,6 +54,7 @@ func main() {
 	pwFile.Passwords = uniquePasswords
 
 	op, err := os.Create(files[1])
+	defer op.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
