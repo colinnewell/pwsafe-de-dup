@@ -526,8 +526,38 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	file.Write(opBuffer.Bytes())
 
 	// that's the header done, now write the headers
+	for _, header := range v3.Headers {
+		block := constructFieldData(header.Type, header.Data)
+		mode.CryptBlocks(block, block)
+		_, err = file.Write(block)
+		if err != nil {
+			return err
+		}
+	}
+	block := constructFieldData(EndOfEntry, []byte{})
+	mode.CryptBlocks(block, block)
+	_, err = file.Write(block)
+	if err != nil {
+		return err
+	}
 
 	// then write the password records
+	for _, record := range v3.Passwords {
+		for _, value := range record.Fields {
+			block := constructFieldData(value.Type, value.Data)
+			mode.CryptBlocks(block, block)
+			_, err = file.Write(block)
+			if err != nil {
+				return err
+			}
+		}
+		block := constructFieldData(EndOfEntry, []byte{})
+		mode.CryptBlocks(block, block)
+		_, err = file.Write(block)
+		if err != nil {
+			return err
+		}
+	}
 
 	// then write the footer, the plain text EOF + hmac
 	_, err = file.Write([]byte("PWS3-EOFPWS3-EOF"))
@@ -543,11 +573,18 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	return nil
 }
 
-func constructFieldData(typeID byte, data interface{}) {
+func constructFieldData(typeID byte, data interface{}) []byte {
 	// construct byte block with sufficient capacity
 	var dataInBytes []byte
 	if typeID == Version {
 		// read this back to 2 bytes
+		dataInBytes = make([]byte, 2)
+		// FIXME: need to do this properly
+		// parse string value back to bytes
+		dataInBytes[1] = 3
+		dataInBytes[0] = 0
+	} else if typeID == EndOfEntry {
+		dataInBytes = make([]byte, 0)
 	} else {
 		switch v := data.(type) {
 		case []byte:
@@ -558,9 +595,21 @@ func constructFieldData(typeID byte, data interface{}) {
 			dataInBytes = make([]byte, 4)
 			binary.LittleEndian.PutUint32(dataInBytes[:], v)
 		case uuid.UUID:
-			dataInBytes, _ := v.MarshalBinary()
+			dataInBytes, _ = v.MarshalBinary()
 		default:
 			panic(fmt.Errorf("Unexpected data type %T to convert", data))
 		}
 	}
+
+	sizeNeeded := 5 + len(dataInBytes)
+	blocks := make([]byte, 16*((sizeNeeded/16)+1))
+	if sizeNeeded < len(blocks) {
+		// fill the remainder of the block with random bytes
+		rand.Read(blocks[sizeNeeded:])
+	}
+	// populate length and type
+	blocks[4] = typeID
+	binary.LittleEndian.PutUint32(blocks, uint32(len(dataInBytes)))
+	copy(blocks[5:], dataInBytes)
+	return blocks
 }
