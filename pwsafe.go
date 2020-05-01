@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"os"
+	"sort"
 	"strings"
 	"unsafe"
 
@@ -125,8 +126,14 @@ func NewPasswordRecord() PasswordRecord {
 
 func (p *PasswordRecord) Sha256() [32]byte {
 	h := sha256.New()
-	for _, v := range p.Fields {
-		h.Write([]byte(v.String()))
+	keys := make([]byte, 0)
+	for k := range p.Fields {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	for _, k := range keys {
+		val := p.Fields[k]
+		h.Write([]byte(val.String()))
 	}
 	var sha [32]byte
 	r := h.Sum(nil)
