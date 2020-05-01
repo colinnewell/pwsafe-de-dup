@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	pwsafe "github.com/colinnewell/pwsafe-de-dup"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -34,36 +33,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	byHash := make(map[[32]byte]pwsafe.PasswordRecord)
+	uuids := make(map[[32]byte]pwsafe.PasswordRecord)
 	totalPasswords := 0
 	for _, p := range pwFile.Passwords {
-		byHash[p.Sha256()] = p
+		uuids[p.Sha256()] = p
 		totalPasswords++
 	}
 	var uniquePasswords []pwsafe.PasswordRecord
-	for _, v := range byHash {
+	for _, v := range uuids {
 		uniquePasswords = append(uniquePasswords, v)
 	}
-	// now fix up uuids so that they are unique to prevent
-	// clash detection losing the plot in future.
-	byUUID := make(map[uuid.UUID]bool)
-	fixedUUIDs := 0
-	for _, v := range uniquePasswords {
-		u := v.Fields[pwsafe.UUID]
-		_, ok := byUUID[u.Data.(uuid.UUID)]
-		changed := false
-		for ok {
-			changed = true
-			u.Data = uuid.New()
-			_, ok = byUUID[u.Data.(uuid.UUID)]
-		}
-		if changed {
-			fixedUUIDs++
-		}
-		byUUID[u.Data.(uuid.UUID)] = true
-	}
-
-	fmt.Printf("Total passwords %d, unique %d, duplicate uuid's fixed up: %d\n", totalPasswords, len(uniquePasswords), fixedUUIDs)
+	fmt.Printf("Total passwords %d, unique %d\n", totalPasswords, len(uniquePasswords))
 	pwFile.Passwords = uniquePasswords
 
 	op, err := os.Create(files[1])
