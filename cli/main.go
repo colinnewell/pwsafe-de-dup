@@ -32,12 +32,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("=== Headers")
-	for _, h := range pwFile.Headers {
-		fmt.Printf("%s\n", h.String())
-	}
-	fmt.Println("")
-	fmt.Println("=== Records")
+	//fmt.Println("=== Headers")
+	//for _, h := range pwFile.Headers {
+	//	fmt.Printf("%s\n", h.String())
+	//}
+	//fmt.Println("")
+	//fmt.Println("=== Records")
 	uuids := make(map[[32]byte]pwsafe.PasswordRecord)
 	totalPasswords := 0
 	for _, p := range pwFile.Passwords {
@@ -46,7 +46,7 @@ func main() {
 	}
 	var uniquePasswords []pwsafe.PasswordRecord
 	for _, v := range uuids {
-		fmt.Println(v.String())
+		//fmt.Println(v.String())
 		uniquePasswords = append(uniquePasswords, v)
 	}
 	fmt.Printf("Total passwords %d, unique %d\n", totalPasswords, len(uniquePasswords))
