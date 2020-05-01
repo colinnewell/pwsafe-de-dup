@@ -608,7 +608,7 @@ func constructFieldData(typeID byte, data interface{}, hm hash.Hash) []byte {
 
 	hm.Write(dataInBytes)
 	sizeNeeded := 5 + len(dataInBytes)
-	blocks := make([]byte, 16*((sizeNeeded/16)+1))
+	blocks := make([]byte, 16*(((sizeNeeded-1)/16)+1))
 	if sizeNeeded < len(blocks) {
 		// fill the remainder of the block with random bytes
 		rand.Read(blocks[sizeNeeded:])
