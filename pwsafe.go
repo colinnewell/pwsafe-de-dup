@@ -9,6 +9,7 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
+	"hash"
 	"os"
 	"strings"
 	"unsafe"
@@ -399,6 +400,10 @@ func Load(file *os.File, password []byte) (V3File, error) {
 			return V3File{}, err
 		}
 
+		// FIXME: not sure what the ideal sanity check here is.
+		if record.Length > 1000 {
+			return V3File{}, fmt.Errorf("Record length %d seems too large", record.Length)
+		}
 		rawData := make([]byte, record.Length)
 		if record.Length >= 11 {
 			needed := record.Length - 11
@@ -508,7 +513,7 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	if err != nil {
 		return err
 	}
-	mode := cipher.NewCBCDecrypter(k, s.IV[:])
+	mode := cipher.NewCBCEncrypter(k, s.IV[:])
 
 	// now we've setup the keys encrypt them before we store them.
 	e, err := twofish.NewCipher(p)
@@ -527,14 +532,14 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 
 	// that's the header done, now write the headers
 	for _, header := range v3.Headers {
-		block := constructFieldData(header.Type, header.Data)
+		block := constructFieldData(header.Type, header.Data, hm)
 		mode.CryptBlocks(block, block)
 		_, err = file.Write(block)
 		if err != nil {
 			return err
 		}
 	}
-	block := constructFieldData(EndOfEntry, []byte{})
+	block := constructFieldData(EndOfEntry, []byte{}, hm)
 	mode.CryptBlocks(block, block)
 	_, err = file.Write(block)
 	if err != nil {
@@ -544,14 +549,14 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	// then write the password records
 	for _, record := range v3.Passwords {
 		for _, value := range record.Fields {
-			block := constructFieldData(value.Type, value.Data)
+			block := constructFieldData(value.Type, value.Data, hm)
 			mode.CryptBlocks(block, block)
 			_, err = file.Write(block)
 			if err != nil {
 				return err
 			}
 		}
-		block := constructFieldData(EndOfEntry, []byte{})
+		block := constructFieldData(EndOfEntry, []byte{}, hm)
 		mode.CryptBlocks(block, block)
 		_, err = file.Write(block)
 		if err != nil {
@@ -573,7 +578,7 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	return nil
 }
 
-func constructFieldData(typeID byte, data interface{}) []byte {
+func constructFieldData(typeID byte, data interface{}, hm hash.Hash) []byte {
 	// construct byte block with sufficient capacity
 	var dataInBytes []byte
 	if typeID == Version {
@@ -601,6 +606,7 @@ func constructFieldData(typeID byte, data interface{}) []byte {
 		}
 	}
 
+	hm.Write(dataInBytes)
 	sizeNeeded := 5 + len(dataInBytes)
 	blocks := make([]byte, 16*((sizeNeeded/16)+1))
 	if sizeNeeded < len(blocks) {
