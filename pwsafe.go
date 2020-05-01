@@ -542,3 +542,25 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 
 	return nil
 }
+
+func constructFieldData(typeID byte, data interface{}) {
+	// construct byte block with sufficient capacity
+	var dataInBytes []byte
+	if typeID == Version {
+		// read this back to 2 bytes
+	} else {
+		switch v := data.(type) {
+		case []byte:
+			dataInBytes = v
+		case string:
+			dataInBytes = []byte(v)
+		case uint32:
+			dataInBytes = make([]byte, 4)
+			binary.LittleEndian.PutUint32(dataInBytes[:], v)
+		case uuid.UUID:
+			dataInBytes, _ := v.MarshalBinary()
+		default:
+			panic(fmt.Errorf("Unexpected data type %T to convert", data))
+		}
+	}
+}
