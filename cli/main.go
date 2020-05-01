@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,8 +11,13 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+var displayDuplicates bool
+
 func main() {
-	files := os.Args[1:]
+	flag.BoolVar(&displayDuplicates, "display-duplicates", false, "Display duplicates")
+	flag.Parse()
+
+	files := flag.Args()
 	if len(files) < 2 {
 		log.Fatal("Must specify filename")
 	}
@@ -36,6 +42,14 @@ func main() {
 	uuids := make(map[[32]byte]pwsafe.PasswordRecord)
 	totalPasswords := 0
 	for _, p := range pwFile.Passwords {
+		if displayDuplicates {
+			_, ok := uuids[p.Sha256()]
+			if ok {
+				fmt.Println(p.String())
+				o := uuids[p.Sha256()]
+				fmt.Println(o.String())
+			}
+		}
 		uuids[p.Sha256()] = p
 		totalPasswords++
 	}

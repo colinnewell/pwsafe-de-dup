@@ -112,10 +112,14 @@ type recordHeader struct {
 
 func (p *PasswordRecord) String() string {
 	var b strings.Builder
-	b.WriteString("PasswordRecord:\n")
-	for _, v := range p.Fields {
-		b.WriteString(v.String())
-		b.WriteString("\n")
+	b.WriteString("== PasswordRecord ==\n")
+	keys := p.sortedFieldKey()
+	for _, k := range keys {
+		if k != Password {
+			v := p.Fields[k]
+			b.WriteString(v.String())
+			b.WriteString("\n")
+		}
 	}
 	return b.String()
 }
@@ -124,13 +128,18 @@ func NewPasswordRecord() PasswordRecord {
 	return PasswordRecord{Fields: make(map[byte]Field)}
 }
 
-func (p *PasswordRecord) Sha256() [32]byte {
-	h := sha256.New()
+func (p *PasswordRecord) sortedFieldKey() []byte {
 	keys := make([]byte, 0)
 	for k := range p.Fields {
 		keys = append(keys, k)
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	return keys
+}
+
+func (p *PasswordRecord) Sha256() [32]byte {
+	h := sha256.New()
+	keys := p.sortedFieldKey()
 	for _, k := range keys {
 		val := p.Fields[k]
 		h.Write([]byte(val.String()))
