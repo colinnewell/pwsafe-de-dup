@@ -38,10 +38,12 @@ func TestRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer op.Close()
-	defer os.Remove(tmpfile.Name())
+	defer os.Remove(op.Name())
 
 	if err := pwFile.Write(op, []byte("test password")); err != nil {
+		t.Error(err)
+	}
+	if err := op.Close(); err != nil {
 		t.Error(err)
 	}
 	// then read back in.
