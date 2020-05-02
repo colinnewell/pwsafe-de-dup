@@ -19,6 +19,9 @@ import (
 	"golang.org/x/crypto/twofish"
 )
 
+// FIXME: should create some proper enum's here
+// type HeaderType byte
+// type FieldType byte
 const (
 	// header types
 	DatabaseDescription      = 0x0a
