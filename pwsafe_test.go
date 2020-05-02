@@ -30,6 +30,14 @@ func TestRoundTrip(t *testing.T) {
 						Type: pwsafe.UUID,
 						Data: uuid.New(),
 					},
+					pwsafe.Username: pwsafe.Field{
+						Type: pwsafe.Username,
+						Data: "user",
+					},
+					pwsafe.Password: pwsafe.Field{
+						Type: pwsafe.Password,
+						Data: "test password",
+					},
 				},
 			},
 		},
