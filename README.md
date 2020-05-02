@@ -49,6 +49,27 @@ When you run the program it will ask you for the password on the console.
 
     ./pwsafe db.psafe3 de-dupped.psafe3
 
+## Debugging
+
+If you're using delve[^1] to debug this then the password input requires a
+tty.  This isn't something you'll get out of the box while running delve on
+the console.  To work around that you can use the new `--tty` option.
+
+Use the ptyme[^2] program to provide a tty you can link to on one terminal:
+
+    $ target/debug/ptyme
+    Opened new PTY device: /dev/pts/6
+
+On another:
+
+    $ dlv debug --tty /dev/pts/6 cli/main.go -- pwsafe.psafe3 de-dupped.psafe3
+
+When the program then interacts with the user, it will be on that first
+terminal, and you wil be able to enter the password there.
+
+[^1]: https://github.com/go-delve/delve
+[^2]: https://github.com/derekparker/ptyme
+
 ## Testing a python library
 
 The Loxodo python project to implenent the pwsafe library was my simlest
