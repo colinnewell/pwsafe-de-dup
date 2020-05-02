@@ -65,3 +65,7 @@ tags
 .history
 
 # End of https://www.gitignore.io/api/visualstudiocode
+suppressions
+corpus
+crashers
+pwsafe-fuzz.zip
