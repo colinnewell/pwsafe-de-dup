@@ -61,10 +61,10 @@ func main() {
 	pwFile.Passwords = uniquePasswords
 
 	op, err := os.Create(files[1])
-	defer op.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer op.Close()
 
 	if err := pwFile.Write(op, bytePassword); err != nil {
 		log.Fatal(err)
