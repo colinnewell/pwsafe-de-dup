@@ -2,6 +2,7 @@ package pwsafe_test
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	pwsafe "github.com/colinnewell/pwsafe-de-dup"
@@ -38,7 +39,7 @@ func TestRoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 	defer op.Close()
-	//defer os.Remove(tmpfile.Name())
+	defer os.Remove(tmpfile.Name())
 
 	if err := pwFile.Write(op, []byte("test password")); err != nil {
 		t.Error(err)
