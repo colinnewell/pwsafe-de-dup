@@ -46,6 +46,42 @@ func Fuzz(data []byte) int {
 				h.Data = bytes
 			}
 		},
+		func(r *Field, c fuzz.Continue) {
+			var typeID byte
+			c.Fuzz(&typeID)
+			*r = Field{Type: typeID}
+			switch typeID {
+			case UUID:
+				// uuid
+				var u uuid.UUID
+				c.Fuzz(&u)
+				r.Data = u
+			case CreationTime, PasswordModificationTime,
+				LastAccessTime, PasswordExpiryTime,
+				LastModificationTime:
+				// time_t
+				var t uint32
+				c.Fuzz(&t)
+				r.Data = t
+			case Group, Autotype, CreditCardExpiration,
+				CreditCardNumber, CreditCardPIN,
+				CreditCardVerifValue, EMailAddress, Notes,
+				OwnSymbolsForPassword, Password, PasswordHistory,
+				PasswordPolicy, PasswordPolicyName, QRCode,
+				RunCommand, Title, URL, Username:
+				// string
+				var val string
+				c.Fuzz(&val)
+				r.Data = val
+			default:
+				// there are various types we know about that are
+				// binary so we're letting them come here as well
+				// as things we're not aware of
+				var bytes []byte
+				c.Fuzz(&bytes)
+				r.Data = bytes
+			}
+		},
 		func(r *PasswordRecord, c fuzz.Continue) {
 			// FIXME: need to do a loop and create fields
 			// need to do some mandatory fields + some random
@@ -71,45 +107,13 @@ func Fuzz(data []byte) int {
 					},
 				},
 			}
-			// var typeID byte
-			// c.Fuzz(&typeID)
+			var extra_fields []Field
+			c.Fuzz(&extra_fields)
+			// now poplate the fields
+			for i := range extra_fields {
+				r.Fields[extra_fields[i].Type] = extra_fields[i]
+			}
 
-			// switch typeID {
-			// case UUID:
-			// 	// uuid
-			// 	var err error
-			// 	var source [16]byte
-			// 	c.Fuzz(&source)
-			// 	data, err = uuid.FromBytes(source[:])
-			// 	if err != nil {
-			// 		panic(err)
-			// 	}
-			// 	r.Data = data
-			// case CreationTime, PasswordModificationTime,
-			// 	LastAccessTime, PasswordExpiryTime,
-			// 	LastModificationTime:
-			// 	// time_t
-			// 	var t uint32
-			// 	c.Fuzz(&t)
-			// 	r.Data = t
-			// case Group, Autotype, CreditCardExpiration,
-			// 	CreditCardNumber, CreditCardPIN,
-			// 	CreditCardVerifValue, EMailAddress, Notes,
-			// 	OwnSymbolsForPassword, Password, PasswordHistory,
-			// 	PasswordPolicy, PasswordPolicyName, QRCode,
-			// 	RunCommand, Title, URL, Username:
-			// 	// string
-			// 	var val string
-			// 	c.Fuzz(&val)
-			// 	r.Data = val
-			// default:
-			// 	// there are various types we know about that are
-			// 	// binary so we're letting them come here as well
-			// 	// as things we're not aware of
-			// 	var bytes []byte
-			// 	c.Fuzz(&bytes)
-			// 	r.Data = bytes
-			// }
 		},
 	)
 	f.Fuzz(&pwFile)
