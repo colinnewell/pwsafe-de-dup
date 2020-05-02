@@ -2,6 +2,15 @@
 
 This is a toy project to help de-duplicate a Password Safe v3 file.
 
+The de-duplication is for literal complete duplicates.  There's a
+situation where the client I use detects a conflict on merging 2
+databases, and creates a duplicate record, not realising that that
+record already exists in the database.  This means that over time you
+end up with lots of duplicates.  It does have ways to clear that up, but
+due to laziness and tiny screens I've neglected that, and the problem
+has become rampant.  To save myself some time manually deleting them,
+I've spent a week writing some code.
+
 This is partly me learning Go, and partly to solve a problem.
 
 This is not a general purpose library for password safe written in Go.  While
