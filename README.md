@@ -2,7 +2,7 @@
 
 This is a toy project to help de-duplicate a Password Safe v3 file.
 
-The de-duplication is for literal complete duplicates.  There's a
+The de-duplication is for complete byte for byte duplicates.  There's a
 situation where the client I use detects a conflict on merging 2
 databases, and creates a duplicate record, not realising that that
 record already exists in the database.  This means that over time you
