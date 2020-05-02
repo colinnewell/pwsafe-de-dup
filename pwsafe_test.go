@@ -12,7 +12,7 @@ import (
 
 func TestRoundTrip(t *testing.T) {
 	zeros := [16]byte{}
-	blank_uuid, err := uuid.FromBytes(zeros[:])
+	blankUUID, err := uuid.FromBytes(zeros[:])
 	if err != nil {
 		t.Error(err)
 	}
@@ -20,7 +20,7 @@ func TestRoundTrip(t *testing.T) {
 		Headers: []pwsafe.HeaderRecord{
 			pwsafe.HeaderRecord{
 				Type: pwsafe.UUID,
-				Data: blank_uuid,
+				Data: blankUUID,
 			},
 		},
 		Passwords: []pwsafe.PasswordRecord{
