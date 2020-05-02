@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	pwsafe "github.com/colinnewell/pwsafe-de-dup"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
 
@@ -40,11 +41,28 @@ func TestRoundTrip(t *testing.T) {
 	}
 	defer os.Remove(op.Name())
 
-	if err := pwFile.Write(op, []byte("test password")); err != nil {
+	password := []byte("test password")
+	if err := pwFile.Write(op, password); err != nil {
 		t.Error(err)
 	}
 	if err := op.Close(); err != nil {
 		t.Error(err)
 	}
+
 	// then read back in.
+	file, err := os.Open(op.Name())
+	if err != nil {
+		t.Error(err)
+	}
+	defer file.Close()
+
+	readFile, err := pwsafe.Load(file, password)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// then compare
+	if diff := cmp.Diff(pwFile, readFile); diff != "" {
+		t.Errorf("Round trip not identical (-wrote +read):\n%s\n", diff)
+	}
 }
