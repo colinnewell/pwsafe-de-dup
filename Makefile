@@ -9,3 +9,8 @@ lint:
 
 test:
 	go test
+
+fuzz:
+	go get github.com/dvyukov/go-fuzz/go-fuzz github.com/dvyukov/go-fuzz/go-fuzz-build
+	go-fuzz-build
+	go-fuzz
