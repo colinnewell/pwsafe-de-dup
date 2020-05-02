@@ -47,7 +47,7 @@ restricted to those platforms.  I haven't checked.
 
 When you run the program it will ask you for the password on the console.
 
-    ./pwsafe db.psafe3
+    ./pwsafe db.psafe3 de-dupped.psafe3
 
 ## Testing a python library
 
