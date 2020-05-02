@@ -543,19 +543,31 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	e.Encrypt(s.B3B4[16:], s.B3B4[16:])
 
 	opBuffer := new(bytes.Buffer)
-	binary.Write(opBuffer, binary.LittleEndian, s)
-	file.Write(opBuffer.Bytes())
+	err = binary.Write(opBuffer, binary.LittleEndian, s)
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(opBuffer.Bytes())
+	if err != nil {
+		return err
+	}
 
 	// that's the header done, now write the headers
 	for _, header := range v3.Headers {
-		block := constructFieldData(header.Type, header.Data, hm)
+		block, err := constructFieldData(header.Type, header.Data, hm)
+		if err != nil {
+			return err
+		}
 		mode.CryptBlocks(block, block)
 		_, err = file.Write(block)
 		if err != nil {
 			return err
 		}
 	}
-	block := constructFieldData(EndOfEntry, []byte{}, hm)
+	block, err := constructFieldData(EndOfEntry, []byte{}, hm)
+	if err != nil {
+		return err
+	}
 	mode.CryptBlocks(block, block)
 	_, err = file.Write(block)
 	if err != nil {
@@ -565,14 +577,20 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	// then write the password records
 	for _, record := range v3.Passwords {
 		for _, value := range record.Fields {
-			block := constructFieldData(value.Type, value.Data, hm)
+			block, err := constructFieldData(value.Type, value.Data, hm)
+			if err != nil {
+				return err
+			}
 			mode.CryptBlocks(block, block)
 			_, err = file.Write(block)
 			if err != nil {
 				return err
 			}
 		}
-		block := constructFieldData(EndOfEntry, []byte{}, hm)
+		block, err := constructFieldData(EndOfEntry, []byte{}, hm)
+		if err != nil {
+			return err
+		}
 		mode.CryptBlocks(block, block)
 		_, err = file.Write(block)
 		if err != nil {
@@ -594,7 +612,7 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 	return nil
 }
 
-func constructFieldData(typeID byte, data interface{}, hm hash.Hash) []byte {
+func constructFieldData(typeID byte, data interface{}, hm hash.Hash) ([]byte, error) {
 	// construct byte block with sufficient capacity
 	var dataInBytes []byte
 	if typeID == Version {
@@ -627,11 +645,14 @@ func constructFieldData(typeID byte, data interface{}, hm hash.Hash) []byte {
 	blocks := make([]byte, 16*(((sizeNeeded-1)/16)+1))
 	if sizeNeeded < len(blocks) {
 		// fill the remainder of the block with random bytes
-		rand.Read(blocks[sizeNeeded:])
+		_, err := rand.Read(blocks[sizeNeeded:])
+		if err != nil {
+			return []byte{}, err
+		}
 	}
 	// populate length and type
 	blocks[4] = typeID
 	binary.LittleEndian.PutUint32(blocks, uint32(len(dataInBytes)))
 	copy(blocks[5:], dataInBytes)
-	return blocks
+	return blocks, nil
 }
