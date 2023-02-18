@@ -1,4 +1,5 @@
 issues:
   exclude:
     # staticcheck
-    - "SA1019: package golang.org/x/crypto/twofish is deprecated"
+    - "golang.org/x/crypto/twofish"
+    - "golang.org/x/crypto/ssh/terminal"

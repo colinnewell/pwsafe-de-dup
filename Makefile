@@ -5,7 +5,6 @@ pwsafe: cli/main.go pwsafe.go
 
 lint:
 	golangci-lint run
-	golint ./...
 
 test:
 	go test
