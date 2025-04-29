@@ -332,7 +332,7 @@ func Load(file *os.File, password []byte) (V3File, error) {
 		return V3File{}, err
 	}
 	if info.Size() < 232 {
-		return V3File{}, fmt.Errorf("File truncated")
+		return V3File{}, fmt.Errorf("file truncated")
 	}
 
 	defer file.Close()
@@ -345,7 +345,7 @@ func Load(file *os.File, password []byte) (V3File, error) {
 		return V3File{}, err
 	}
 	if read < int(size) {
-		return V3File{}, fmt.Errorf("Failed to read enough of the file")
+		return V3File{}, fmt.Errorf("failed to read enough of the file")
 	}
 
 	buffer := bytes.NewBuffer(data)
@@ -354,11 +354,11 @@ func Load(file *os.File, password []byte) (V3File, error) {
 		return V3File{}, err
 	}
 	if string(s.Tag[:]) != "PWS3" {
-		return V3File{}, fmt.Errorf("Header tag missing")
+		return V3File{}, fmt.Errorf("header tag missing")
 	}
 
 	if s.ITER < 2048 {
-		return V3File{}, fmt.Errorf("Iterations too small")
+		return V3File{}, fmt.Errorf("iterations too small")
 	}
 
 	h := sha256.New()
@@ -374,7 +374,7 @@ func Load(file *os.File, password []byte) (V3File, error) {
 	h.Write(p)
 	hp := h.Sum(nil)
 	if subtle.ConstantTimeCompare(hp, s.HP[:]) == 0 {
-		return V3File{}, fmt.Errorf("Password incorrect")
+		return V3File{}, fmt.Errorf("password incorrect")
 	}
 
 	fmt.Println("")
@@ -421,7 +421,7 @@ func Load(file *os.File, password []byte) (V3File, error) {
 
 		// FIXME: not sure what the ideal sanity check here is.
 		if record.Length > 1000 {
-			return V3File{}, fmt.Errorf("Record length %d seems too large", record.Length)
+			return V3File{}, fmt.Errorf("record length %d seems too large", record.Length)
 		}
 		rawData := make([]byte, record.Length)
 		if record.Length >= 11 {
@@ -482,7 +482,7 @@ func Load(file *os.File, password []byte) (V3File, error) {
 		return V3File{}, err
 	}
 	if read < 32 {
-		return V3File{}, fmt.Errorf("Missed hmac")
+		return V3File{}, fmt.Errorf("missed hmac")
 	}
 	actualHMAC := hm.Sum(nil)
 	if !hmac.Equal(actualHMAC, storedHMAC[:]) {
@@ -501,7 +501,7 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 		return err
 	}
 	if read < int(size) {
-		return fmt.Errorf("Failed to read enough random data")
+		return fmt.Errorf("failed to read enough random data")
 	}
 
 	buffer := bytes.NewBuffer(randomData)
@@ -618,16 +618,17 @@ func (v3 *V3File) Write(file *os.File, password []byte) error {
 func constructFieldData(typeID byte, data interface{}, hm hash.Hash) ([]byte, error) {
 	// construct byte block with sufficient capacity
 	var dataInBytes []byte
-	if typeID == Version {
+	switch typeID {
+	case Version:
 		// read this back to 2 bytes
 		dataInBytes = make([]byte, 2)
 		// FIXME: need to do this properly
 		// parse string value back to bytes
 		dataInBytes[1] = 3
 		dataInBytes[0] = 0
-	} else if typeID == EndOfEntry {
+	case EndOfEntry:
 		dataInBytes = make([]byte, 0)
-	} else {
+	default:
 		switch v := data.(type) {
 		case []byte:
 			dataInBytes = v
@@ -639,7 +640,7 @@ func constructFieldData(typeID byte, data interface{}, hm hash.Hash) ([]byte, er
 		case uuid.UUID:
 			dataInBytes, _ = v.MarshalBinary()
 		default:
-			panic(fmt.Errorf("Unexpected data type %T to convert", data))
+			panic(fmt.Errorf("unexpected data type %T to convert", data))
 		}
 	}
 

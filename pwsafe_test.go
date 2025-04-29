@@ -1,7 +1,6 @@
 package pwsafe_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -43,7 +42,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 	}
 
-	op, err := ioutil.TempFile("", "psafe3-test")
+	op, err := os.CreateTemp("", "psafe3-test")
 	if err != nil {
 		t.Error(err)
 	}
